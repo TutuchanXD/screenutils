@@ -7,10 +7,7 @@
 
 from screenutils.errors import ScreenNotFoundError
 
-try:
-    from commands import getoutput
-except:
-    from subprocess import getoutput
+from subprocess import getoutput
 from threading import Thread
 from os import system
 from os.path import getsize
