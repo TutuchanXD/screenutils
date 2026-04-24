@@ -25,7 +25,7 @@ Example in a python console::
    >>> s.send_commands('bash')
    >>> s.enable_logs()
    >>> s.send_commands("df")
-   >>> print next(s.logs)
+   >>> print(next(s.logs))
    df
    Filesystem           1K-blocks      Used Available Use% Mounted on
    /dev/sda6             20161172   8084052  11052980  43% /
@@ -58,11 +58,11 @@ Installation
 
 You could install screenutils from github, by doing the following::
 
-    $ pip install git+http://github.com/Christophe31/screenutils.git
+    $ python -m pip install git+http://github.com/Christophe31/screenutils.git
 
 Or by just using the packages published on Pypi, for instance with pip::
 
-    $ pip install screenutils
+    $ python -m pip install screenutils
 
 Features
 ---------

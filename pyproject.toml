@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "screenutils"
+version = "0.0.1.6.2"
+description = "Library for GNU screen: create, close, list, log sessions, and inject commands."
+readme = "README.rst"
+requires-python = ">=3.8"
+license = { text = "GPL-2.0-or-later" }
+authors = [
+    { name = "Christophe Narbonne" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "http://github.com/Christophe31/screenutils"
+Repository = "http://github.com/Christophe31/screenutils"
+
+[tool.setuptools.packages.find]
+include = ["screenutils*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
