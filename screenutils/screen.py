@@ -6,13 +6,13 @@
 # Please ask if you wish a more permissive license.
 
 from dataclasses import dataclass
-from screenutils.errors import ScreenNotFoundError
-
-from subprocess import getoutput
+from pathlib import Path
+from subprocess import PIPE, STDOUT, CalledProcessError, run
 from threading import Thread
-from os import system
 from os.path import getsize
 from time import sleep
+
+from screenutils.errors import ScreenNotFoundError
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,29 @@ class ScreenInfo:
     name: str
     status: str
     date: str = None
+
+
+def _run_screen(*args, check=True):
+    """Run GNU screen with an argument list, never through a shell."""
+    return run(
+        ["screen"] + list(args),
+        stdout=PIPE,
+        stderr=STDOUT,
+        universal_newlines=True,
+        check=check,
+    )
+
+
+def _screen_output(*args):
+    """Run GNU screen and return combined stdout/stderr text.
+
+    Some screen commands, notably ``screen -ls`` when no sessions exist, may
+    return a non-zero exit code while still producing useful output.
+    """
+    try:
+        return _run_screen(*args).stdout
+    except CalledProcessError as exc:
+        return exc.output or ""
 
 
 def parse_screen_ls(output):
@@ -53,7 +76,7 @@ def parse_screen_ls(output):
 
 
 def _get_screen_infos():
-    return parse_screen_ls(getoutput("screen -ls"))
+    return parse_screen_ls(_screen_output("-ls"))
 
 
 def tailf(file_):
@@ -131,7 +154,7 @@ class Screen(object):
     def disable_logs(self, remove_logfile=False):
         self._screen_commands("log off")
         if remove_logfile:
-            system('rm ' + self._logfilename)
+            Path(self._logfilename).unlink()
         self.logs = None
 
     def initialize(self):
@@ -142,7 +165,7 @@ class Screen(object):
             Thread(target=self._delayed_detach).start()
             # support Unicode (-U),
             # attach to a new/existing named screen (-R).
-            system('screen -UR ' + self.name)
+            _run_screen("-UR", self.name)
 
     def interrupt(self):
         """Insert CTRL+C in the screen session"""
@@ -155,7 +178,7 @@ class Screen(object):
     def detach(self):
         """detach the screen"""
         self._check_exists()
-        system("screen -d " + self.id)
+        _run_screen("-d", self.id)
 
     def send_commands(self, *commands):
         """send commands to the active gnu-screen"""
@@ -173,7 +196,7 @@ class Screen(object):
         a glossary of the existing screen command in `man screen`"""
         self._check_exists()
         for command in commands:
-            system('screen -x ' + self.id + ' -X ' + command)
+            _run_screen("-x", self.id, "-X", command)
             sleep(0.02)
 
     def _check_exists(self, message="Error code: 404."):
