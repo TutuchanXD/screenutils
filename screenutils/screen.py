@@ -5,6 +5,7 @@
 # and/or modify it under the terms of the GNU Public License 2 or upper.
 # Please ask if you wish a more permissive license.
 
+from dataclasses import dataclass
 from screenutils.errors import ScreenNotFoundError
 
 from subprocess import getoutput
@@ -12,6 +13,47 @@ from threading import Thread
 from os import system
 from os.path import getsize
 from time import sleep
+
+
+@dataclass(frozen=True)
+class ScreenInfo:
+    """Parsed information for one GNU screen session."""
+
+    id: str
+    name: str
+    status: str
+    date: str = None
+
+
+def parse_screen_ls(output):
+    """Parse ``screen -ls`` output into ``ScreenInfo`` entries."""
+    screens = []
+    for line in output.splitlines():
+        if not line.startswith("\t"):
+            continue
+
+        fields = [field for field in line.split("\t") if field]
+        if len(fields) < 2 or "." not in fields[0]:
+            continue
+
+        id_, name = fields[0].split(".", 1)
+        if not id_ or not name:
+            continue
+
+        if len(fields) >= 3:
+            date = fields[1].strip("()")
+            status = fields[2].strip("()")
+        else:
+            date = None
+            status = fields[1].strip("()")
+
+        screens.append(ScreenInfo(id=id_, name=name, date=date, status=status))
+
+    return screens
+
+
+def _get_screen_infos():
+    return parse_screen_ls(getoutput("screen -ls"))
 
 
 def tailf(file_):
@@ -33,12 +75,7 @@ def tailf(file_):
 def list_screens():
     """List all the existing screens and build a Screen instance for each
     """
-    list_cmd = "screen -ls"
-    return [
-                Screen(".".join(l.split(".")[1:]).split("\t")[0])
-                for l in getoutput(list_cmd).split('\n')
-                if "\t" in l and ".".join(l.split(".")[1:]).split("\t")[0]
-            ]
+    return [Screen(info.name) for info in _get_screen_infos()]
 
 
 class Screen(object):
@@ -81,11 +118,7 @@ class Screen(object):
     @property
     def exists(self):
         """Tell if the screen session exists or not."""
-        # Parse the screen -ls call, to find if the screen exists or not.
-        #  "	28062.G.Terminal	(Detached)"
-        lines = getoutput("screen -ls").split('\n')
-        return self.name in [".".join(l.split(".")[1:]).split("\t")[0]
-                             for l in lines if self.name in l]
+        return any(info.name == self.name for info in _get_screen_infos())
 
     def enable_logs(self, filename=None):
         if filename is None:
@@ -150,24 +183,13 @@ class Screen(object):
 
     def _set_screen_infos(self):
         """set the screen information related parameters"""
-        if self.exists:
-            line = ""
-            for l in getoutput("screen -ls").split("\n"):
-                if (
-                        l.startswith('\t') and
-                        self.name in l and
-                        self.name == ".".join(
-                            l.split('\t')[1].split('.')[1:]) in l):
-                    line = l
-            if not line:
-                raise ScreenNotFoundError("While getting info.", self.name)
-            infos = line.split('\t')[1:]
-            self._id = infos[0].split('.')[0]
-            if len(infos) == 3:
-                self._date = infos[1][1:-1]
-                self._status = infos[2][1:-1]
-            else:
-                self._status = infos[1][1:-1]
+        for info in _get_screen_infos():
+            if info.name == self.name:
+                self._id = info.id
+                self._date = info.date
+                self._status = info.status
+                return
+        raise ScreenNotFoundError("While getting info.", self.name)
 
     def _delayed_detach(self):
         sleep(0.5)
