@@ -8,7 +8,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import PIPE, STDOUT, CalledProcessError, run
-from threading import Thread
 from os.path import getsize
 from time import sleep
 
@@ -158,14 +157,11 @@ class Screen(object):
         self.logs = None
 
     def initialize(self):
-        """initialize a screen, if does not exists yet"""
+        """initialize a detached screen, if does not exists yet"""
         if not self.exists:
             self._id = None
-            # Detach the screen once attached, on a new tread.
-            Thread(target=self._delayed_detach).start()
-            # support Unicode (-U),
-            # attach to a new/existing named screen (-R).
-            _run_screen("-UR", self.name)
+            # Create a new detached session without requiring a TTY.
+            _run_screen("-dmS", self.name)
 
     def interrupt(self):
         """Insert CTRL+C in the screen session"""
@@ -214,9 +210,6 @@ class Screen(object):
                 return
         raise ScreenNotFoundError("While getting info.", self.name)
 
-    def _delayed_detach(self):
-        sleep(0.5)
-        self.detach()
 
     def __repr__(self):
         return "<%s '%s'>" % (self.__class__.__name__, self.name)

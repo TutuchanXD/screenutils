@@ -34,15 +34,24 @@ def test_screen_output_returns_output_from_non_zero_screen_command(monkeypatch):
     assert _screen_output("-ls") == "No Sockets found.\n"
 
 
-def test_initialize_runs_screen_ur_with_session_name_as_argument(monkeypatch):
+def test_initialize_creates_detached_session_without_tty(monkeypatch):
     calls = []
     monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: "No Sockets found.\n")
-    monkeypatch.setattr("screenutils.screen.Thread", lambda target: Mock(start=lambda: None))
     monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
 
     Screen("job; rm -rf /", initialize=True)
 
-    assert calls == [("-UR", "job; rm -rf /")]
+    assert calls == [("-dmS", "job; rm -rf /")]
+
+
+def test_initialize_does_not_create_existing_session(monkeypatch):
+    calls = []
+    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
+
+    Screen("job", initialize=True)
+
+    assert calls == []
 
 
 def test_detach_runs_screen_d_with_cached_screen_id(monkeypatch):
