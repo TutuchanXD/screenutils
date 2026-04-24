@@ -91,7 +91,7 @@ Core Documentation
 
   - NOTE: ``.id``, ``.status``, ``.exists`` are all based off of the output of ``screen -ls``
 
-* ``screen.initialize`` Initialize a screen if does not exists yet. Equivalent to running ``screen -UR screen_name``
+* ``screen.initialize`` Initialize a detached screen if it does not exist yet. Equivalent to running ``screen -dmS screen_name``
 * ``screen.enable_logs()`` turns Screen's logging on. The Logfile's name is automatically set to that of the ``Screen`` object.
 * ``screen.logs`` A generator that acts like ``tailF`` on the logfile.
 * ``screen.disable_logs()`` turns logging off.
