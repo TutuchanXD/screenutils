@@ -66,7 +66,7 @@ def test_parse_screen_ls_ignores_irrelevant_lines():
 
 
 def test_list_screens_uses_parsed_session_names(monkeypatch):
-    monkeypatch.setattr("screenutils.screen.getoutput", lambda command: MULTIPLE_SCREENS)
+    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
 
     screens = list_screens()
 
@@ -75,7 +75,7 @@ def test_list_screens_uses_parsed_session_names(monkeypatch):
 
 
 def test_screen_exists_uses_exact_session_name_matching(monkeypatch):
-    monkeypatch.setattr("screenutils.screen.getoutput", lambda command: MULTIPLE_SCREENS)
+    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
 
     assert Screen("foo").exists is True
     assert Screen("foo.bar").exists is True
@@ -84,7 +84,7 @@ def test_screen_exists_uses_exact_session_name_matching(monkeypatch):
 
 
 def test_screen_info_properties_use_exact_session_name_matching(monkeypatch):
-    monkeypatch.setattr("screenutils.screen.getoutput", lambda command: MULTIPLE_SCREENS)
+    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
 
     screen = Screen("foo.bar")
 
@@ -93,7 +93,7 @@ def test_screen_info_properties_use_exact_session_name_matching(monkeypatch):
 
 
 def test_screen_info_properties_raise_for_missing_session(monkeypatch):
-    monkeypatch.setattr("screenutils.screen.getoutput", lambda command: MULTIPLE_SCREENS)
+    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
 
     with pytest.raises(ScreenNotFoundError):
         Screen("missing").id
