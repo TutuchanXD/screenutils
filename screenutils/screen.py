@@ -8,7 +8,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import PIPE, STDOUT, CalledProcessError, run
-from os.path import getsize
 from time import sleep
 
 from screenutils.errors import ScreenNotFoundError
@@ -78,19 +77,26 @@ def _get_screen_infos():
     return parse_screen_ls(_screen_output("-ls"))
 
 
-def tailf(file_):
-    """Each value is content added to the log file since last value return"""
-    last_size = getsize(file_)
+def tailf(file_, interval=0.1):
+    """Yield content appended to a log file, similar to ``tail -f``.
+
+    The generator preserves the historical behavior of yielding an empty
+    string when no new content is available, but it now sleeps briefly between
+    empty reads to avoid a busy loop in automation code.
+    """
+    path = Path(file_)
+    last_size = path.stat().st_size
     while True:
-        cur_size = getsize(file_)
-        if (cur_size != last_size):
-            f = open(file_, 'r')
-            f.seek(last_size if cur_size > last_size else 0)
-            text = f.read()
-            f.close()
+        cur_size = path.stat().st_size
+        if cur_size != last_size:
+            with path.open("r") as f:
+                f.seek(last_size if cur_size > last_size else 0)
+                text = f.read()
             last_size = cur_size
             yield text
         else:
+            if interval:
+                sleep(interval)
             yield ""
 
 
@@ -147,7 +153,7 @@ class Screen(object):
             filename = self.name
         self._screen_commands("logfile " + filename, "log on")
         self._logfilename = filename
-        open(filename, 'w+')
+        Path(filename).touch()
         self.logs = tailf(filename)
 
     def disable_logs(self, remove_logfile=False):

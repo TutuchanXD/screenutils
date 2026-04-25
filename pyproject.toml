@@ -27,8 +27,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "http://github.com/Christophe31/screenutils"
-Repository = "http://github.com/Christophe31/screenutils"
+Homepage = "https://github.com/TutuchanXD/screenutils"
+Repository = "https://github.com/TutuchanXD/screenutils"
+"Upstream Repository" = "https://github.com/Christophe31/screenutils"
 
 [tool.setuptools.packages.find]
 include = ["screenutils*"]
