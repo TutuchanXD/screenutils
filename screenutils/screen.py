@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import PIPE, STDOUT, CalledProcessError, run
-from time import sleep
+from time import monotonic, sleep
 
 from screenutils.errors import ScreenNotFoundError
 
@@ -77,19 +77,31 @@ def _get_screen_infos():
     return parse_screen_ls(_screen_output("-ls"))
 
 
-def tailf(file_, interval=0.1):
+def tailf(file_, interval=0.1, encoding="utf-8", errors="replace", missing_ok=False):
     """Yield content appended to a log file, similar to ``tail -f``.
 
     The generator preserves the historical behavior of yielding an empty
     string when no new content is available, but it now sleeps briefly between
     empty reads to avoid a busy loop in automation code.
+
+    If ``missing_ok`` is true, missing files are treated like idle reads until
+    the file appears. Otherwise, a missing initial file raises
+    ``FileNotFoundError``.
     """
     path = Path(file_)
-    last_size = path.stat().st_size
+    last_size = 0 if missing_ok and not path.exists() else path.stat().st_size
     while True:
+        if not path.exists():
+            if not missing_ok:
+                raise FileNotFoundError(path)
+            if interval:
+                sleep(interval)
+            yield ""
+            continue
+
         cur_size = path.stat().st_size
         if cur_size != last_size:
-            with path.open("r") as f:
+            with path.open("r", encoding=encoding, errors=errors) as f:
                 f.seek(last_size if cur_size > last_size else 0)
                 text = f.read()
             last_size = cur_size
@@ -148,13 +160,30 @@ class Screen(object):
         """Tell if the screen session exists or not."""
         return any(info.name == self.name for info in _get_screen_infos())
 
-    def enable_logs(self, filename=None):
+    def enable_logs(self, filename=None, interval=0.1, encoding="utf-8", errors="replace"):
         if filename is None:
             filename = self.name
         self._screen_commands("logfile " + filename, "log on")
         self._logfilename = filename
         Path(filename).touch()
-        self.logs = tailf(filename)
+        self.logs = self.tail_logs(interval=interval, encoding=encoding, errors=errors)
+
+    def tail_logs(self, timeout=None, interval=0.1, encoding="utf-8", errors="replace"):
+        """Yield log chunks until ``timeout`` seconds elapse, if provided."""
+        if self._logfilename is None:
+            raise RuntimeError("Logs are not enabled. Call enable_logs() first.")
+
+        deadline = None if timeout is None else monotonic() + timeout
+        for chunk in tailf(
+            self._logfilename,
+            interval=interval,
+            encoding=encoding,
+            errors=errors,
+            missing_ok=True,
+        ):
+            if deadline is not None and monotonic() >= deadline:
+                return
+            yield chunk
 
     def disable_logs(self, remove_logfile=False):
         self._screen_commands("log off")
