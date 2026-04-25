@@ -60,7 +60,7 @@ def test_send_text_sends_without_enter(monkeypatch):
 
     Screen("job").send_text("hello")
 
-    assert calls == [("-x", "1234", "-X", 'stuff "hello" ')]
+    assert calls == [("-S", "1234", "-X", "stuff", "hello")]
 
 
 def test_send_line_sends_text_and_enter(monkeypatch):
@@ -71,10 +71,7 @@ def test_send_line_sends_text_and_enter(monkeypatch):
 
     Screen("job").send_line("echo hello")
 
-    assert calls == [
-        ("-x", "1234", "-X", 'stuff "echo hello" '),
-        ("-x", "1234", "-X", 'eval "stuff \\015"'),
-    ]
+    assert calls == [("-S", "1234", "-X", "stuff", "echo hello\n")]
 
 
 def test_legacy_send_commands_delegates_to_send_line(monkeypatch):
@@ -86,10 +83,8 @@ def test_legacy_send_commands_delegates_to_send_line(monkeypatch):
     Screen("job").send_commands("one", "two")
 
     assert calls == [
-        ("-x", "1234", "-X", 'stuff "one" '),
-        ("-x", "1234", "-X", 'eval "stuff \\015"'),
-        ("-x", "1234", "-X", 'stuff "two" '),
-        ("-x", "1234", "-X", 'eval "stuff \\015"'),
+        ("-S", "1234", "-X", "stuff", "one\n"),
+        ("-S", "1234", "-X", "stuff", "two\n"),
     ]
 
 
