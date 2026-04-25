@@ -7,8 +7,9 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from subprocess import PIPE, STDOUT, CalledProcessError, run
+from subprocess import PIPE, STDOUT, CalledProcessError, CompletedProcess, run
 from time import monotonic, sleep
+from typing import Generator, List, Optional, Union
 
 from screenutils.errors import ScreenNotFoundError
 
@@ -20,10 +21,10 @@ class ScreenInfo:
     id: str
     name: str
     status: str
-    date: str = None
+    date: Optional[str] = None
 
 
-def _run_screen(*args, check=True):
+def _run_screen(*args: str, check: bool = True) -> CompletedProcess:
     """Run GNU screen with an argument list, never through a shell."""
     return run(
         ["screen"] + list(args),
@@ -34,7 +35,7 @@ def _run_screen(*args, check=True):
     )
 
 
-def _screen_output(*args):
+def _screen_output(*args: str) -> str:
     """Run GNU screen and return combined stdout/stderr text.
 
     Some screen commands, notably ``screen -ls`` when no sessions exist, may
@@ -46,7 +47,7 @@ def _screen_output(*args):
         return exc.output or ""
 
 
-def parse_screen_ls(output):
+def parse_screen_ls(output: str) -> List[ScreenInfo]:
     """Parse ``screen -ls`` output into ``ScreenInfo`` entries."""
     screens = []
     for line in output.splitlines():
@@ -73,11 +74,17 @@ def parse_screen_ls(output):
     return screens
 
 
-def _get_screen_infos():
+def _get_screen_infos() -> List[ScreenInfo]:
     return parse_screen_ls(_screen_output("-ls"))
 
 
-def tailf(file_, interval=0.1, encoding="utf-8", errors="replace", missing_ok=False):
+def tailf(
+    file_: Union[str, Path],
+    interval: float = 0.1,
+    encoding: str = "utf-8",
+    errors: str = "replace",
+    missing_ok: bool = False,
+) -> Generator[str, None, None]:
     """Yield content appended to a log file, similar to ``tail -f``.
 
     The generator preserves the historical behavior of yielding an empty
@@ -112,7 +119,7 @@ def tailf(file_, interval=0.1, encoding="utf-8", errors="replace", missing_ok=Fa
             yield ""
 
 
-def list_screens():
+def list_screens() -> List["Screen"]:
     """List all the existing screens and build a Screen instance for each
     """
     return [Screen(info.name) for info in _get_screen_infos()]
@@ -133,7 +140,7 @@ class Screen(object):
         False
     """
 
-    def __init__(self, name, initialize=False):
+    def __init__(self, name: str, initialize: bool = False) -> None:
         self.name = name
         self._id = None
         self._status = None
@@ -142,33 +149,65 @@ class Screen(object):
         if initialize:
             self.initialize()
 
+    @classmethod
+    def create(cls, name: str) -> "Screen":
+        """Create a detached screen session and return its ``Screen`` wrapper."""
+        screen = cls(name)
+        screen.initialize()
+        return screen
+
+    @classmethod
+    def ensure(cls, name: str) -> "Screen":
+        """Return a ``Screen`` wrapper, creating the session if necessary."""
+        return cls.create(name)
+
+    @classmethod
+    def get(cls, name: str) -> "Screen":
+        """Return an existing screen session or raise ``ScreenNotFoundError``."""
+        screen = cls(name)
+        screen._check_exists()
+        return screen
+
     @property
-    def id(self):
+    def id(self) -> str:
         """return the identifier of the screen as string"""
         if not self._id:
             self._set_screen_infos()
         return self._id
 
     @property
-    def status(self):
+    def status(self) -> str:
         """return the status of the screen as string"""
         self._set_screen_infos()
         return self._status
 
     @property
-    def exists(self):
+    def exists(self) -> bool:
         """Tell if the screen session exists or not."""
         return any(info.name == self.name for info in _get_screen_infos())
 
-    def enable_logs(self, filename=None, interval=0.1, encoding="utf-8", errors="replace"):
+    def enable_logs(
+        self,
+        filename: Optional[Union[str, Path]] = None,
+        interval: float = 0.1,
+        encoding: str = "utf-8",
+        errors: str = "replace",
+    ) -> None:
         if filename is None:
             filename = self.name
+        filename = str(filename)
         self._screen_commands("logfile " + filename, "log on")
         self._logfilename = filename
         Path(filename).touch()
         self.logs = self.tail_logs(interval=interval, encoding=encoding, errors=errors)
 
-    def tail_logs(self, timeout=None, interval=0.1, encoding="utf-8", errors="replace"):
+    def tail_logs(
+        self,
+        timeout: Optional[float] = None,
+        interval: float = 0.1,
+        encoding: str = "utf-8",
+        errors: str = "replace",
+    ) -> Generator[str, None, None]:
         """Yield log chunks until ``timeout`` seconds elapse, if provided."""
         if self._logfilename is None:
             raise RuntimeError("Logs are not enabled. Call enable_logs() first.")
@@ -185,44 +224,60 @@ class Screen(object):
                 return
             yield chunk
 
-    def disable_logs(self, remove_logfile=False):
+    def disable_logs(self, remove_logfile: bool = False) -> None:
         self._screen_commands("log off")
         if remove_logfile:
             Path(self._logfilename).unlink()
         self.logs = None
 
-    def initialize(self):
+    def initialize(self) -> None:
         """initialize a detached screen, if does not exists yet"""
         if not self.exists:
             self._id = None
             # Create a new detached session without requiring a TTY.
             _run_screen("-dmS", self.name)
 
-    def interrupt(self):
+    def interrupt(self) -> None:
         """Insert CTRL+C in the screen session"""
+        self.ctrl_c()
+
+    def ctrl_c(self) -> None:
+        """Insert CTRL+C in the screen session."""
         self._screen_commands("eval \"stuff \\003\"")
 
-    def kill(self):
+    def kill(self) -> None:
         """Kill the screen applications then close the screen"""
+        self.quit()
+
+    def quit(self) -> None:
+        """Quit the screen session."""
         self._screen_commands('quit')
 
-    def detach(self):
+    def detach(self) -> None:
         """detach the screen"""
         self._check_exists()
         _run_screen("-d", self.id)
 
-    def send_commands(self, *commands):
-        """send commands to the active gnu-screen"""
+    def send_text(self, text: str) -> None:
+        """Send raw text to the active GNU screen session."""
         self._check_exists()
-        for command in commands:
-            self._screen_commands('stuff "' + command + '" ',
-                                  'eval "stuff \\015"')
+        self._screen_commands('stuff "' + text + '" ')
 
-    def add_user_access(self, unix_user_name):
+    def send_line(self, command: str) -> None:
+        """Send one command line to the active GNU screen session."""
+        self.send_text(command)
+        self._screen_commands('eval "stuff \\015"')
+
+    def send_commands(self, *commands: str) -> None:
+        """send commands to the active gnu-screen"""
+        for command in commands:
+            self.send_line(command)
+
+    def add_user_access(self, unix_user_name: str) -> None:
         """allow to share your session with an other unix user"""
         self._screen_commands('multiuser on', 'acladd ' + unix_user_name)
 
-    def _screen_commands(self, *commands):
+    def _screen_commands(self, *commands: str) -> None:
         """allow to insert generic screen specific commands
         a glossary of the existing screen command in `man screen`"""
         self._check_exists()
@@ -230,12 +285,12 @@ class Screen(object):
             _run_screen("-x", self.id, "-X", command)
             sleep(0.02)
 
-    def _check_exists(self, message="Error code: 404."):
+    def _check_exists(self, message: str = "Error code: 404.") -> None:
         """check whereas the screen exist. if not, raise an exception"""
         if not self.exists:
             raise ScreenNotFoundError(message, self.name)
 
-    def _set_screen_infos(self):
+    def _set_screen_infos(self) -> None:
         """set the screen information related parameters"""
         for info in _get_screen_infos():
             if info.name == self.name:
@@ -246,5 +301,5 @@ class Screen(object):
         raise ScreenNotFoundError("While getting info.", self.name)
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s '%s'>" % (self.__class__.__name__, self.name)
