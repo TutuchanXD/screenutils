@@ -36,3 +36,6 @@ include = ["screenutils*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: tests that require a real GNU screen binary",
+]

@@ -54,43 +54,69 @@ def test_get_raises_for_missing_screen(monkeypatch):
 
 def test_send_text_sends_without_enter(monkeypatch):
     calls = []
+    sleeps = []
     monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
     monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: None)
+    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
 
     Screen("job").send_text("hello")
 
-    assert calls == [("-x", "1234", "-X", 'stuff "hello" ')]
+    assert calls == [("-S", "1234", "-X", "stuff", "hello")]
+    assert sleeps == [0.02]
 
 
 def test_send_line_sends_text_and_enter(monkeypatch):
     calls = []
+    sleeps = []
     monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
     monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: None)
+    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
 
     Screen("job").send_line("echo hello")
 
-    assert calls == [
-        ("-x", "1234", "-X", 'stuff "echo hello" '),
-        ("-x", "1234", "-X", 'eval "stuff \\015"'),
-    ]
+    assert calls == [("-S", "1234", "-X", "stuff", "echo hello\n")]
+    assert sleeps == [0.02]
 
 
 def test_legacy_send_commands_delegates_to_send_line(monkeypatch):
     calls = []
+    sleeps = []
     monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
     monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: None)
+    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
 
     Screen("job").send_commands("one", "two")
 
     assert calls == [
-        ("-x", "1234", "-X", 'stuff "one" '),
-        ("-x", "1234", "-X", 'eval "stuff \\015"'),
-        ("-x", "1234", "-X", 'stuff "two" '),
-        ("-x", "1234", "-X", 'eval "stuff \\015"'),
+        ("-S", "1234", "-X", "stuff", "one\n"),
+        ("-S", "1234", "-X", "stuff", "two\n"),
     ]
+    assert sleeps == [0.02, 0.02]
+
+
+def test_hardcopy_uses_screen_runner_and_returns_file_text(monkeypatch, tmp_path):
+    calls = []
+    hardcopy_path = tmp_path / "hardcopy.txt"
+
+    class FakeTemporaryFile:
+        name = str(hardcopy_path)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+    def fake_run_screen(*args):
+        calls.append(args)
+        hardcopy_path.write_text("visible text", encoding="utf-8")
+
+    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenutils.screen.NamedTemporaryFile", FakeTemporaryFile)
+    monkeypatch.setattr("screenutils.screen._run_screen", fake_run_screen)
+
+    assert Screen("job").hardcopy() == "visible text"
+    assert calls == [("-S", "1234", "-X", "hardcopy", "-h", str(hardcopy_path))]
 
 
 def test_ctrl_c_and_quit_aliases(monkeypatch):
