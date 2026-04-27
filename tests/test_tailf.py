@@ -61,6 +61,61 @@ def test_tailf_can_wait_for_missing_file(monkeypatch, tmp_path):
     assert next(logs) == "created"
 
 
+def test_tailf_reads_recreated_missing_file_from_start(monkeypatch, tmp_path):
+    sleeps = []
+    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+
+    log_file = tmp_path / "screen.log"
+    log_file.write_text("old content")
+
+    logs = tailf(log_file, interval=0.5, missing_ok=True)
+
+    assert next(logs) == ""
+    sleeps.clear()
+
+    log_file.unlink()
+
+    assert next(logs) == ""
+    assert sleeps == [0.5]
+
+    log_file.write_text("new content is longer than old content")
+
+    assert next(logs) == "new content is longer than old content"
+
+
+def test_tailf_tolerates_missing_file_between_stat_and_open(
+    monkeypatch, tmp_path
+):
+    sleeps = []
+    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+
+    log_file = tmp_path / "screen.log"
+    log_file.write_text("initial")
+
+    logs = tailf(log_file, interval=0.25, missing_ok=True)
+
+    assert next(logs) == ""
+    sleeps.clear()
+
+    original_open = type(log_file).open
+
+    def unlink_then_open(path, *args, **kwargs):
+        if path == log_file:
+            path.unlink()
+        return original_open(path, *args, **kwargs)
+
+    log_file.write_text("initial\nnext")
+    monkeypatch.setattr(type(log_file), "open", unlink_then_open)
+
+    assert next(logs) == ""
+    assert sleeps == [0.25]
+
+    monkeypatch.setattr(type(log_file), "open", original_open)
+    log_file.write_text("recreated")
+
+    assert next(logs) == "recreated"
+
+
 def test_tailf_replaces_invalid_bytes_when_configured(tmp_path):
     log_file = tmp_path / "screen.log"
     log_file.write_bytes(b"initial")
@@ -114,3 +169,39 @@ def test_tail_logs_stops_after_timeout(monkeypatch, tmp_path):
     assert next(logs) == ""
     with pytest.raises(StopIteration):
         next(logs)
+
+
+def test_tail_logs_timeout_zero_yields_no_chunks(monkeypatch, tmp_path):
+    sleeps = []
+    monkeypatch.setattr("screenutils.screen.monotonic", lambda: 1.0)
+    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+
+    log_file = tmp_path / "screen.log"
+    log_file.write_text("")
+
+    screen = Screen("job")
+    screen._logfilename = str(log_file)
+
+    with pytest.raises(StopIteration):
+        next(screen.tail_logs(timeout=0, interval=0.5))
+
+    assert sleeps == []
+
+
+def test_tail_logs_short_timeout_does_not_sleep_past_deadline(
+    monkeypatch, tmp_path
+):
+    times = iter([0.0, 0.05])
+    sleeps = []
+    monkeypatch.setattr("screenutils.screen.monotonic", lambda: next(times))
+    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+
+    log_file = tmp_path / "screen.log"
+    log_file.write_text("")
+
+    screen = Screen("job")
+    screen._logfilename = str(log_file)
+
+    with pytest.raises(StopIteration):
+        next(screen.tail_logs(timeout=0.01, interval=0.5))
+    assert sleeps == []

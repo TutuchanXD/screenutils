@@ -6,6 +6,7 @@
 # Please ask if you wish a more permissive license.
 
 from dataclasses import dataclass
+from os import fstat
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from subprocess import PIPE, STDOUT, CalledProcessError, CompletedProcess, run
@@ -97,22 +98,62 @@ def tailf(
     ``FileNotFoundError``.
     """
     path = Path(file_)
-    last_size = 0 if missing_ok and not path.exists() else path.stat().st_size
+    last_position = 0
+    last_identity = None
+    initialized = False
     while True:
-        if not path.exists():
+        try:
+            stat = path.stat()
+        except FileNotFoundError:
             if not missing_ok:
                 raise FileNotFoundError(path)
+            last_position = 0
+            last_identity = None
+            initialized = True
             if interval:
                 sleep(interval)
             yield ""
             continue
 
-        cur_size = path.stat().st_size
-        if cur_size != last_size:
-            with path.open("r", encoding=encoding, errors=errors) as f:
-                f.seek(last_size if cur_size > last_size else 0)
-                text = f.read()
-            last_size = cur_size
+        identity = (stat.st_dev, stat.st_ino)
+        if not initialized:
+            last_position = stat.st_size
+            last_identity = identity
+            initialized = True
+            if interval:
+                sleep(interval)
+            yield ""
+            continue
+
+        should_read_from_start = (
+            identity != last_identity or stat.st_size < last_position
+        )
+        read_from = 0 if should_read_from_start else last_position
+
+        if stat.st_size != last_position or should_read_from_start:
+            try:
+                with path.open("r", encoding=encoding, errors=errors) as f:
+                    opened_stat = fstat(f.fileno())
+                    opened_identity = (opened_stat.st_dev, opened_stat.st_ino)
+                    if (
+                        opened_identity != last_identity
+                        or opened_stat.st_size < last_position
+                    ):
+                        read_from = 0
+                    f.seek(read_from)
+                    text = f.read()
+                    last_position = f.tell()
+            except FileNotFoundError:
+                if not missing_ok:
+                    raise
+                last_position = 0
+                last_identity = None
+                if interval:
+                    sleep(interval)
+                yield ""
+                continue
+
+            last_identity = opened_identity
             yield text
         else:
             if interval:
@@ -214,16 +255,19 @@ class Screen(object):
             raise RuntimeError("Logs are not enabled. Call enable_logs() first.")
 
         deadline = None if timeout is None else monotonic() + timeout
-        for chunk in tailf(
+        logs = tailf(
             self._logfilename,
             interval=interval,
             encoding=encoding,
             errors=errors,
             missing_ok=True,
-        ):
-            if deadline is not None and monotonic() >= deadline:
-                return
-            yield chunk
+        )
+        while True:
+            if deadline is not None:
+                remaining = deadline - monotonic()
+                if remaining <= 0 or (interval and remaining < interval):
+                    return
+            yield next(logs)
 
     def disable_logs(self, remove_logfile: bool = False) -> None:
         self._screen_commands("log off")
