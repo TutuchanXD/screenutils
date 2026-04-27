@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from subprocess import DEVNULL, PIPE, STDOUT, CalledProcessError, CompletedProcess, run
+from subprocess import PIPE, STDOUT, CalledProcessError, CompletedProcess, run
 from time import monotonic, sleep
 from typing import Generator, List, Optional, Union
 
@@ -263,6 +263,7 @@ class Screen(object):
         """Send raw text to the active GNU screen session."""
         self._check_exists()
         _run_screen("-S", self.id, "-X", "stuff", text)
+        sleep(0.02)
 
     def send_line(self, command: str) -> None:
         """Send one command line to the active GNU screen session."""
@@ -272,12 +273,7 @@ class Screen(object):
         """Return the current visible contents of the screen session."""
         self._check_exists()
         with NamedTemporaryFile() as hardcopy_file:
-            run(
-                ["screen", "-S", self.id, "-X", "hardcopy", "-h", hardcopy_file.name],
-                stdout=DEVNULL,
-                stderr=DEVNULL,
-                check=True,
-            )
+            _run_screen("-S", self.id, "-X", "hardcopy", "-h", hardcopy_file.name)
             return Path(hardcopy_file.name).read_text(errors="replace")
 
     def send_commands(self, *commands: str) -> None:

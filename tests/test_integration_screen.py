@@ -1,10 +1,12 @@
 import shutil
 import time
+from subprocess import CalledProcessError
 from uuid import uuid4
 
 import pytest
 
 from screenutils import Screen, list_screens
+from screenutils.errors import ScreenNotFoundError
 
 
 pytestmark = pytest.mark.integration
@@ -27,7 +29,7 @@ def screen_session():
         try:
             if screen.exists:
                 screen.quit()
-        except Exception:
+        except (CalledProcessError, ScreenNotFoundError):
             pass
 
 
@@ -50,7 +52,7 @@ def test_screen_lifecycle_against_real_gnu_screen(screen_session):
     assert _wait_for(lambda: not screen_session.exists) is True
 
 
-def test_send_text_and_send_line_against_real_gnu_screen(screen_session):
+def test_send_text_against_real_gnu_screen(screen_session):
     typed = "screenutils-integration-ok"
 
     screen_session.send_text(typed)
@@ -60,4 +62,13 @@ def test_send_text_and_send_line_against_real_gnu_screen(screen_session):
 
     assert _wait_for(hardcopy_contains_typed_text, timeout=5.0) is True
 
-    screen_session.send_line("clear")
+
+def test_send_line_executes_command_against_real_gnu_screen(screen_session):
+    echoed = f"screenutils-send-line-{uuid4().hex}"
+    encoded_echo = "".join(f"\\{ord(char):03o}" for char in echoed)
+    screen_session.send_line(f"printf '{encoded_echo}\\n'")
+
+    def hardcopy_contains_echoed_text():
+        return echoed in screen_session.hardcopy()
+
+    assert _wait_for(hardcopy_contains_echoed_text, timeout=5.0) is True
