@@ -1,6 +1,6 @@
 import pytest
 
-from screenutils.screen import Screen, tailf
+from screenctl.screen import Screen, tailf
 
 
 SCREEN_LS = """There is a screen on:
@@ -11,7 +11,7 @@ SCREEN_LS = """There is a screen on:
 
 def test_tailf_yields_appended_text_without_busy_wait(monkeypatch, tmp_path):
     sleeps = []
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr("screenctl.screen.sleep", lambda seconds: sleeps.append(seconds))
 
     log_file = tmp_path / "screen.log"
     log_file.write_text("initial")
@@ -48,7 +48,7 @@ def test_tailf_missing_initial_file_raises_by_default(tmp_path):
 
 def test_tailf_can_wait_for_missing_file(monkeypatch, tmp_path):
     sleeps = []
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr("screenctl.screen.sleep", lambda seconds: sleeps.append(seconds))
 
     log_file = tmp_path / "missing.log"
     logs = tailf(log_file, interval=0.5, missing_ok=True)
@@ -84,9 +84,9 @@ def test_tail_logs_requires_logs_to_be_enabled():
 def test_enable_logs_configures_tail_logs(monkeypatch, tmp_path):
     log_file = tmp_path / "screen.log"
 
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
-    monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: None)
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: None)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenctl.screen._run_screen", lambda *args: None)
+    monkeypatch.setattr("screenctl.screen.sleep", lambda seconds: None)
 
     screen = Screen("job")
     screen.enable_logs(str(log_file), interval=0)
@@ -100,8 +100,8 @@ def test_enable_logs_configures_tail_logs(monkeypatch, tmp_path):
 
 def test_tail_logs_stops_after_timeout(monkeypatch, tmp_path):
     times = iter([0.0, 0.05, 0.2])
-    monkeypatch.setattr("screenutils.screen.monotonic", lambda: next(times))
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: None)
+    monkeypatch.setattr("screenctl.screen.monotonic", lambda: next(times))
+    monkeypatch.setattr("screenctl.screen.sleep", lambda seconds: None)
 
     log_file = tmp_path / "screen.log"
     log_file.write_text("")

@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "screenutils"
+name = "screenctl"
 version = "0.0.1.6.2"
 description = "Library for GNU screen: create, close, list, log sessions, and inject commands."
 readme = "README.rst"
@@ -27,15 +27,15 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/TutuchanXD/screenutils"
-Repository = "https://github.com/TutuchanXD/screenutils"
-"Upstream Repository" = "https://github.com/Christophe31/screenutils"
+Homepage = "https://github.com/TutuchanXD/screenctl"
+Repository = "https://github.com/TutuchanXD/screenctl"
 
 [tool.setuptools.packages.find]
-include = ["screenutils*"]
+include = ["screenctl*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "integration: tests that require a real GNU screen binary",
 ]

@@ -12,7 +12,7 @@ from subprocess import PIPE, STDOUT, CalledProcessError, CompletedProcess, run
 from time import monotonic, sleep
 from typing import Generator, List, Optional, Union
 
-from screenutils.errors import ScreenNotFoundError
+from screenctl.errors import ScreenNotFoundError
 
 
 @dataclass(frozen=True)

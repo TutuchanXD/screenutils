@@ -1,10 +1,10 @@
-# screenutils Modernization Plan
+# screenctl Modernization Plan
 
-This document describes a staged modernization plan for `screenutils`, a small Python wrapper around GNU screen. The goal is to make the project safe, testable, Python 3 native, and suitable for automation use cases while preserving the spirit of the original API where practical.
+This document describes a staged modernization plan for `screenctl`, a small Python wrapper around GNU screen. The goal is to make the project safe, testable, Python 3 native, and suitable for automation use cases while preserving the spirit of the original API where practical.
 
 ## 1. Project Assessment
 
-`screenutils` currently provides a thin Python interface for:
+`screenctl` currently provides a thin Python interface for:
 
 - Listing GNU screen sessions.
 - Creating named screen sessions.
@@ -85,7 +85,7 @@ Acceptance criteria:
 - The existing public imports still work:
 
   ```python
-  from screenutils import Screen, list_screens, ScreenNotFoundError
+  from screenctl import Screen, list_screens, ScreenNotFoundError
   ```
 
 - CI runs successfully.
@@ -299,7 +299,7 @@ Improve developer ergonomics while preserving the original API where possible.
 Possible new API surface:
 
 ```python
-from screenutils import Screen
+from screenctl import Screen
 
 s = Screen.ensure("job")
 s.send_line("python train.py")
@@ -489,7 +489,7 @@ Recommended safeguards:
 Before starting implementation, decide:
 
 1. What minimum Python version should be supported?
-2. Should this fork keep the package name `screenutils`, or use a new name if republished?
+2. Future publication should use the `screenctl` package and repository name.
 3. Should `Screen.kill()` remain the preferred method, or should `quit()` become primary?
 4. Should multi-user ACL support remain, given the system-level permission implications?
 5. Should the project maintain GPLv2+ licensing, or only clarify the existing license file?

@@ -1,4 +1,4 @@
-from screenutils import Screen, ScreenNotFoundError, list_screens
+from screenctl import Screen, ScreenNotFoundError, list_screens
 
 
 def test_public_imports_are_available():

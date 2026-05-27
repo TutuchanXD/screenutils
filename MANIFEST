@@ -1,5 +1,5 @@
 README.rst
 setup.py
-screenutils/__init__.py
-screenutils/errors.py
-screenutils/screen.py
+screenctl/__init__.py
+screenctl/errors.py
+screenctl/screen.py

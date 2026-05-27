@@ -1,7 +1,7 @@
 import pytest
 
-from screenutils.errors import ScreenNotFoundError
-from screenutils.screen import Screen, ScreenInfo, list_screens, parse_screen_ls
+from screenctl.errors import ScreenNotFoundError
+from screenctl.screen import Screen, ScreenInfo, list_screens, parse_screen_ls
 
 
 NO_SCREENS = """No Sockets found in /run/screen/S-user.
@@ -66,7 +66,7 @@ def test_parse_screen_ls_ignores_irrelevant_lines():
 
 
 def test_list_screens_uses_parsed_session_names(monkeypatch):
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
 
     screens = list_screens()
 
@@ -75,7 +75,7 @@ def test_list_screens_uses_parsed_session_names(monkeypatch):
 
 
 def test_screen_exists_uses_exact_session_name_matching(monkeypatch):
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
 
     assert Screen("foo").exists is True
     assert Screen("foo.bar").exists is True
@@ -84,7 +84,7 @@ def test_screen_exists_uses_exact_session_name_matching(monkeypatch):
 
 
 def test_screen_info_properties_use_exact_session_name_matching(monkeypatch):
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
 
     screen = Screen("foo.bar")
 
@@ -93,7 +93,7 @@ def test_screen_info_properties_use_exact_session_name_matching(monkeypatch):
 
 
 def test_screen_info_properties_raise_for_missing_session(monkeypatch):
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: MULTIPLE_SCREENS)
 
     with pytest.raises(ScreenNotFoundError):
         Screen("missing").id
