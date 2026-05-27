@@ -6,16 +6,19 @@ build-backend = "setuptools.build_meta"
 name = "screenctl"
 version = "0.0.1.6.2"
 description = "Library for GNU screen: create, close, list, log sessions, and inject commands."
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.8"
-license = { text = "GPL-2.0-or-later" }
+license = { text = "GPL-3.0-or-later" }
 authors = [
     { name = "Christophe Narbonne" }
+]
+maintainers = [
+    { name = "TutuchanXD" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.8",
