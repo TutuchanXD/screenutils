@@ -1,11 +1,9 @@
-CAUTION: this project is not maintained anymore as it's maintainer don't use it anymore
-(and switched to tmux). If you contribute a bit, you may reclaim this project.
+screenctl is maintained as the active project name for this GNU screen helper library.
 
+screenctl
+=========
 
-screenutils
-===========
-
-screenutils is a set of classes that should help handling gnu-screen windows.
+screenctl is a set of classes that should help handling gnu-screen windows.
 
 It requires gnu-screen binary installed (named screen and in your path) to work.
 
@@ -17,7 +15,7 @@ Example usage
 
 Example in a python console::
 
-   >>> from screenutils import list_screens, Screen
+   >>> from screenctl import list_screens, Screen
    >>> list_screens()
    []
    >>> s = Screen("session1",True)
@@ -36,7 +34,7 @@ Example in a python console::
    none                   1512676         0   1512676   0% /lib/init/rw
    none                  20161172   8084052  11052980  43% /var/lib/ureadahead/debugfs
    /dev/sda7            403567768 196284216 186783420  52% /home
-   popi@popi-laptop:~/Dev/github/screenutils$
+   popi@popi-laptop:~/Dev/github/screenctl$
    >>> s.disable_logs()
    >>> s = None
    >>> s = Screen("session1")
@@ -56,13 +54,13 @@ Example in a python console::
 Installation
 -------------
 
-You could install screenutils from github, by doing the following::
+You could install screenctl from github, by doing the following::
 
-    $ python -m pip install git+http://github.com/Christophe31/screenutils.git
+    $ python -m pip install git+https://github.com/TutuchanXD/screenctl.git
 
 Or by just using the packages published on Pypi, for instance with pip::
 
-    $ python -m pip install screenutils
+    $ python -m pip install screenctl
 
 Features
 ---------

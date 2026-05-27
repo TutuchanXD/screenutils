@@ -1,7 +1,7 @@
 import pytest
 
-from screenutils import Screen
-from screenutils.errors import ScreenNotFoundError
+from screenctl import Screen
+from screenctl.errors import ScreenNotFoundError
 
 
 SCREEN_LS = """There is a screen on:
@@ -15,8 +15,8 @@ NO_SCREENS = """No Sockets found in /run/screen/S-user.
 
 def test_create_initializes_and_returns_screen(monkeypatch):
     calls = []
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: NO_SCREENS)
-    monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: NO_SCREENS)
+    monkeypatch.setattr("screenctl.screen._run_screen", lambda *args: calls.append(args))
 
     screen = Screen.create("job")
 
@@ -27,8 +27,8 @@ def test_create_initializes_and_returns_screen(monkeypatch):
 
 def test_ensure_is_create_alias(monkeypatch):
     calls = []
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: NO_SCREENS)
-    monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: NO_SCREENS)
+    monkeypatch.setattr("screenctl.screen._run_screen", lambda *args: calls.append(args))
 
     screen = Screen.ensure("job")
 
@@ -37,7 +37,7 @@ def test_ensure_is_create_alias(monkeypatch):
 
 
 def test_get_returns_existing_screen(monkeypatch):
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: SCREEN_LS)
 
     screen = Screen.get("job")
 
@@ -46,7 +46,7 @@ def test_get_returns_existing_screen(monkeypatch):
 
 
 def test_get_raises_for_missing_screen(monkeypatch):
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: NO_SCREENS)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: NO_SCREENS)
 
     with pytest.raises(ScreenNotFoundError):
         Screen.get("job")
@@ -55,9 +55,9 @@ def test_get_raises_for_missing_screen(monkeypatch):
 def test_send_text_sends_without_enter(monkeypatch):
     calls = []
     sleeps = []
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
-    monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenctl.screen._run_screen", lambda *args: calls.append(args))
+    monkeypatch.setattr("screenctl.screen.sleep", lambda seconds: sleeps.append(seconds))
 
     Screen("job").send_text("hello")
 
@@ -68,9 +68,9 @@ def test_send_text_sends_without_enter(monkeypatch):
 def test_send_line_sends_text_and_enter(monkeypatch):
     calls = []
     sleeps = []
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
-    monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenctl.screen._run_screen", lambda *args: calls.append(args))
+    monkeypatch.setattr("screenctl.screen.sleep", lambda seconds: sleeps.append(seconds))
 
     Screen("job").send_line("echo hello")
 
@@ -81,9 +81,9 @@ def test_send_line_sends_text_and_enter(monkeypatch):
 def test_legacy_send_commands_delegates_to_send_line(monkeypatch):
     calls = []
     sleeps = []
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
-    monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenctl.screen._run_screen", lambda *args: calls.append(args))
+    monkeypatch.setattr("screenctl.screen.sleep", lambda seconds: sleeps.append(seconds))
 
     Screen("job").send_commands("one", "two")
 
@@ -111,9 +111,9 @@ def test_hardcopy_uses_screen_runner_and_returns_file_text(monkeypatch, tmp_path
         calls.append(args)
         hardcopy_path.write_text("visible text", encoding="utf-8")
 
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
-    monkeypatch.setattr("screenutils.screen.NamedTemporaryFile", FakeTemporaryFile)
-    monkeypatch.setattr("screenutils.screen._run_screen", fake_run_screen)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenctl.screen.NamedTemporaryFile", FakeTemporaryFile)
+    monkeypatch.setattr("screenctl.screen._run_screen", fake_run_screen)
 
     assert Screen("job").hardcopy() == "visible text"
     assert calls == [("-S", "1234", "-X", "hardcopy", "-h", str(hardcopy_path))]
@@ -121,9 +121,9 @@ def test_hardcopy_uses_screen_runner_and_returns_file_text(monkeypatch, tmp_path
 
 def test_ctrl_c_and_quit_aliases(monkeypatch):
     calls = []
-    monkeypatch.setattr("screenutils.screen._screen_output", lambda *args: SCREEN_LS)
-    monkeypatch.setattr("screenutils.screen._run_screen", lambda *args: calls.append(args))
-    monkeypatch.setattr("screenutils.screen.sleep", lambda seconds: None)
+    monkeypatch.setattr("screenctl.screen._screen_output", lambda *args: SCREEN_LS)
+    monkeypatch.setattr("screenctl.screen._run_screen", lambda *args: calls.append(args))
+    monkeypatch.setattr("screenctl.screen.sleep", lambda seconds: None)
 
     screen = Screen("job")
     screen.ctrl_c()

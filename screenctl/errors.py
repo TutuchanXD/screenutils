@@ -1,4 +1,4 @@
-"""Errors for the screenutils module"""
+"""Errors for the screenctl module"""
 
 class ScreenNotFoundError(Exception):
     """raised when the screen does not exists"""
