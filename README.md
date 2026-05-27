@@ -106,4 +106,4 @@ Thanks to the original contributors listed in `CONTRIBUTORS`.
 
 ## License
 
-This project is distributed under GPL-2.0-or-later. See [LICENSE](LICENSE).
+This project is distributed under GPL-3.0-or-later. See [LICENSE](LICENSE).
